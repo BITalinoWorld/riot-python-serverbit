@@ -8,7 +8,7 @@
 **If you are using a pre-configured TP-LINK router, you should not need to change these**
 
 For more information, please see the R-IoT guide:
-[bitalino.com/docs/R-IoT_User_Guide.pdf](bitalino.com/docs/R-IoT_User_Guide.pdf)
+[R-IoT_User_Guide.pdf](http://www.bitalino.com/docs/R-IoT_User_Guide.pdf)
 
 
 
