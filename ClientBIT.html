@@ -1,0 +1,38 @@
+<html>
+    <script language="javascript" type="text/javascript" src="jquery.js"></script>
+    <script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+    <script type="text/javascript">
+        // Establish a connection to the ServerBIT
+        var ws = new WebSocket("ws://localhost:9001/");
+
+        ws.onopen = function() {
+        };
+
+        // Process the responses sent by the ServerBIT
+        ws.onmessage = function (e) {
+            data = JSON.parse(e.data)
+            var d1 = [];
+            orientation_labels = ["PITCH", "YAW", "ROLL", "HEAD"]
+            var data_stream = ""
+            for (var i = 0; i < orientation_labels.length; i += 1){
+              ch = orientation_labels[i]
+              data_stream += ch + ": " + data[ch] + "<br />"
+            }
+            //console.log(data_stream)
+            $("#data_stream").html(data_stream);
+        };
+
+        // Detect when the page is unloaded or close
+        window.onbeforeunload = function() {
+            ws.onclose = function () {};
+            ws.close()
+        };
+
+    </script>
+    <body>
+        <div><h1>BITalino R-IoT WS</h1></div>
+        <p id="data_stream">No data received</p>
+
+	<div id="placeholder" style="width:600px;height:300px;"></div>
+    </body>
+</html>
