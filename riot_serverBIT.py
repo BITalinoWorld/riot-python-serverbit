@@ -98,12 +98,10 @@ def riot_listener(id, ip, port):
 def detect_wireless_interface(OS, interface_list):
     det_interface = det_ssid = None
     for interface in interface_list:
-        if ("linux" in OS):
-            ssid = os.popen('iwconfig ' + interface + ' | grep '+ "'ESSID:' | awk '{print $4}' | sed 's/ESSID://g' | sed 's/"+ '"//g' + "'").read()[:-1]
-            if 'no wireless extention' not in ssid:
-                det_ssid = ssid
-                det_interface = interface
-                break
+        if ("linux" in OS or "Linux" in OS):
+            det_interface = os.popen('iwgetid').read()[:-1].split()[0]
+            det_ssid = os.popen('iwgetid -r').read()[:-1]
+            break
         elif ("windows" in OS):
             print("windows")
         else:
@@ -139,14 +137,14 @@ if __name__ == "__main__":
 
     if args.net is not None:
         net_interface_type, ssid = detect_wireless_interface(OS, [args.net])
-        if net_interface_type is None:
-            print ("could not retrieve ssid from %s" % args.net)
-            print ("see available interfaces with: \n \
-                ifconfig -a (UNIX) \n ipconfig |findstr 'adapter' (WINDOWS)")
-            exit()
     else:
         print ("detecting wireless interface... (this can be set manually with --net)")
         net_interface_type, ssid = detect_wireless_interface(OS, netifaces.interfaces())
+    if net_interface_type is None:
+        print ("could not retrieve ssid from %s" % args.net)
+        print ("see available interfaces with: \n \
+            ifconfig -a (UNIX) \n ipconfig |findstr 'adapter' (WINDOWS)")
+        exit()
 
     print("Connected to wifi network: " + ssid)
     addrs = netifaces.ifaddresses(net_interface_type)
@@ -158,7 +156,7 @@ if __name__ == "__main__":
 
     if ssid not in args.ssid:
         print ("currently connected to '%s', please connect to the same network as the R-IoT" % ssid)
-        print ("target ssid can be changed with --ssid 'name_of_network'")
+        print ("(target ssid can be changed with --ssid 'name_of_network')")
         exit()
 
     if args.ip not in ipv4_addr:
@@ -168,7 +166,7 @@ if __name__ == "__main__":
             print("use command :")
             print("(run as administrator)")
         else:
-            print ("sudo ifconfig %s %s netmask 255.255.255.0" % (interface, riot_ip))
+            print ("sudo ifconfig %s %s netmask 255.255.255.0" % (net_interface_type, riot_ip))
         exit()
     try:
         thread.start_new_thread(riot_listener, (args.id, args.ip, args.port))
