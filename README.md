@@ -1,4 +1,7 @@
-# Optional arguments
+# R-IoT ServerBIT
+This can be used to forward the OSC messages to WebSockets
+
+### Optional arguments
 
 - `"--id"`: This dictates the OSC reveive address (/<id>/raw). change this if using multiple devices
 - `"--ip"`: The ip to listen on (usually set to 192.168.1.00)
@@ -12,10 +15,10 @@ For more information, please see the R-IoT guide:
 
 ### Windows
 Set IPv4 address, netmask and gateway:
-netsh interface ip set address Wi-Fi static 192.168.1.100 255.255.255.0 192.168.1.1
+`netsh interface ip set address Wi-Fi static 192.168.1.100 255.255.255.0 192.168.1.1`
 
 To get back online, reset dhcp:
-netsh interface ip set address Wi-Fi dhcp
+`netsh interface ip set address Wi-Fi dhcp`
 
 
 
