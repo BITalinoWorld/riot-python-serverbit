@@ -12,6 +12,7 @@ import json
 import signal
 import numpy
 import sys, traceback, os, time, platform
+import subprocess
 #from os.path import expanduser
 
 from pythonosc import dispatcher
@@ -102,8 +103,10 @@ def detect_wireless_interface(OS, interface_list):
             det_interface = os.popen('iwgetid').read()[:-1].split()[0]
             det_ssid = os.popen('iwgetid -r').read()[:-1]
             break
-        elif ("windows" in OS):
-            print("windows")
+        elif ("Windows" in OS):
+            det_interface = os.popen('netsh wlan show interfaces | findstr /r "^....Name"').read()[:-1].split()[-1]
+            det_ssid = os.popen('netsh wlan show interfaces | findstr /r "^....SSID"').read()[:-1].split()[-1]
+            break
         else:
             ssid = os.popen('networksetup -getairportnetwork ' + interface).read()[:-1]
             if '** Error: Error obtaining wireless information' not in ssid:
@@ -147,9 +150,13 @@ if __name__ == "__main__":
         exit()
 
     print("Connected to wifi network: " + ssid)
-    addrs = netifaces.ifaddresses(net_interface_type)
-    ipv4_addr = addrs[netifaces.AF_INET][0]['addr']
-    print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
+    if "Windows" in OS:
+            ipv4_addr = os.popen('netsh interface ipv4 show config %s | findstr /r "^....IP Address"' % net_interface_type).read()[:-1].split()[-1]
+            print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
+    else:
+        addrs = netifaces.ifaddresses(net_interface_type)
+        ipv4_addr = addrs[netifaces.AF_INET][0]['addr']
+        print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
 
     if riot_ip not in args.ip:
         print ("IP address changed from R-IoT default (%s)" % riot_ip)
@@ -162,11 +169,11 @@ if __name__ == "__main__":
     if args.ip not in ipv4_addr:
         print ("please change the computer's IPv4 address to match")
         print(">>> use the following command")
-        if "windows" in OS:
-            print("use command :")
+        if "Windows" in OS:
+            print("netsh interface ip set address %s static %s 255.255.255.0 192.168.1.1" % (net_interface_type, riot_ip) )
             print("(run as administrator)")
         else:
-            print ("sudo ifconfig %s %s netmask 255.255.255.0" % (net_interface_type, riot_ip))
+            print ("sudo ifconfig %s %s netmask 255.255.255.0" % (net_interface_type, riot_ip) )
         exit()
     try:
         thread.start_new_thread(riot_listener, (args.id, args.ip, args.port))
