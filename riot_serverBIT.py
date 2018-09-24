@@ -95,6 +95,26 @@ def riot_listener(id, ip, port):
     print("Serving on {}".format(server.server_address))
     server.serve_forever()
 
+def detect_wireless_interface(OS, interface_list):
+    det_interface = det_ssid = None
+    for interface in interface_list:
+        if ("linux" in OS):
+            ssid = os.popen('iwconfig ' + interface + ' | grep '+ "'ESSID:' | awk '{print $4}' | sed 's/ESSID://g' | sed 's/"+ '"//g' + "'").read()[:-1]
+            if 'no wireless extention' not in ssid:
+                det_ssid = ssid
+                det_interface = interface
+                break
+        elif ("windows" in OS):
+            print("windows")
+        else:
+            ssid = os.popen('networksetup -getairportnetwork ' + interface).read()[:-1]
+            if '** Error: Error obtaining wireless information' not in ssid:
+                det_ssid = ssid[23:]
+                det_interface = interface
+                break
+
+    return det_interface, det_ssid
+
 async def webApp(ws, path):
     print('LISTENING')
     # print (ut.riot_data)
@@ -104,26 +124,6 @@ async def webApp(ws, path):
 
 if __name__ == "__main__":
     OS = platform.system()
-    if ("linux" in OS):
-        for interface in netifaces.interfaces():
-            ssid = os.popen('iwconfig ' + interface + ' | grep '+ "'ESSID:' | awk '{print $4}' | sed 's/ESSID://g' | sed 's/"+ '"//g' + "'").read()[:-1]
-            if 'no wireless extention' not in ssid:
-                net_interface_type = interface
-    elif ("windows" in OS):
-        print("windows")
-    else:
-        for interface in netifaces.interfaces():
-            ssid = os.popen('networksetup -getairportnetwork ' + interface).read()[:-1]
-            if '** Error: Error obtaining wireless information' not in ssid:
-                ssid = ssid[23:]
-                net_interface_type = interface
-                break
-
-    print("Connected to wifi network: " + ssid)
-    addrs = netifaces.ifaddresses(net_interface_type)
-    ipv4_addr = addrs[netifaces.AF_INET][0]['addr']
-    print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--id",
       type=int, default=0, help="This dictates the OSC reveive address: /<id>/raw")
@@ -133,7 +133,25 @@ if __name__ == "__main__":
       type=int, default=8888, help="The port to listen on")
     parser.add_argument("--ssid",
       default=riot_ssid, help="name of the wifi network which R-IoT device is streaming data to")
+    parser.add_argument("--net",
+      help="name of the wireless interface which the computer is using")
     args = parser.parse_args()
+
+    if args.net is not None:
+        net_interface_type, ssid = detect_wireless_interface(OS, [args.net])
+        if net_interface_type is None:
+            print ("could not retrieve ssid from %s" % args.net)
+            print ("see available interfaces with: \n \
+                ifconfig -a (UNIX) \n ipconfig |findstr 'adapter' (WINDOWS)")
+            exit()
+    else:
+        print ("detecting wireless interface... (this can be set manually with --net)")
+        net_interface_type, ssid = detect_wireless_interface(OS, netifaces.interfaces())
+
+    print("Connected to wifi network: " + ssid)
+    addrs = netifaces.ifaddresses(net_interface_type)
+    ipv4_addr = addrs[netifaces.AF_INET][0]['addr']
+    print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
 
     if riot_ip not in args.ip:
         print ("IP address changed from R-IoT default (%s)" % riot_ip)
