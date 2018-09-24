@@ -18,7 +18,7 @@ from pythonosc import dispatcher
 from pythonosc import osc_server
 import netifaces
 
-net_interface_type = "wlp5s0"
+net_interface_type = "en0"
 riot_ip = '192.168.1.100'
 riot_ssid = 'riot'
 
@@ -66,9 +66,9 @@ def print_riot_data(unused_addr, id, *values):
   print(values)
 
 def assign_riot_data(unused_addr, id, *values):
-    channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+    channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
     labels = ["ACC_X", "ACC_Y", "ACC_Z", "GYRO_X", "GYRO_Y", "GYRO_Z", "MAG_X", "MAG_Y", "MAG_Z",
-        "TEMP", "IO", "A1", "A2", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD",]
+        "TEMP", "IO", "A1", "A2", "C", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD"]
     ch_mask = numpy.array(channels) - 1
     try:
         cols = numpy.arange(len(ch_mask))
@@ -78,7 +78,6 @@ def assign_riot_data(unused_addr, id, *values):
         res = res[:-1] + "}"
         #if len(cl) > 0: cl[-1].write_message(res)
         ut.riot_data = res
-        #print (res)
     except:
         traceback.print_exc()
         os._exit(0)
@@ -88,7 +87,7 @@ def riot_listener(id, ip, port):
     recv_addr = str("/%i/raw"%dev_id)
     #print(recv_addr)
     riot_dispatcher = dispatcher.Dispatcher()
-    #riot_dispatcher.map(recv_addr, print_riot_data, dev_id)
+    # riot_dispatcher.map(recv_addr, print)
     riot_dispatcher.map(recv_addr, assign_riot_data, dev_id)
 
     server = osc_server.ThreadingOSCUDPServer(
@@ -98,20 +97,30 @@ def riot_listener(id, ip, port):
 
 async def webApp(ws, path):
     print('LISTENING')
-    #print (ut.riot_data)
+    # print (ut.riot_data)
     while True:
         await ws.send(ut.riot_data)
         await asyncio.sleep(0.1)
 
 if __name__ == "__main__":
     OS = platform.system()
-    for interface in netifaces.interfaces():
-        ssid = os.popen('iwconfig ' + interface + ' | grep '+ "'ESSID:' | awk '{print $4}' | sed 's/ESSID://g' | sed 's/"+ '"//g' + "'").read()[:-1]
-        if 'no wireless extention' not in ssid:
-            net_interface_type = interface
-    addrs = netifaces.ifaddresses(net_interface_type)
-    ssid = os.popen('iwconfig wlp5s0 | grep '+ "'ESSID:' | awk '{print $4}' | sed 's/ESSID://g' | sed 's/"+ '"//g' + "'").read()[:-1]
+    if ("linux" in OS):
+        for interface in netifaces.interfaces():
+            ssid = os.popen('iwconfig ' + interface + ' | grep '+ "'ESSID:' | awk '{print $4}' | sed 's/ESSID://g' | sed 's/"+ '"//g' + "'").read()[:-1]
+            if 'no wireless extention' not in ssid:
+                net_interface_type = interface
+    elif ("windows" in OS):
+        print("windows")
+    else:
+        for interface in netifaces.interfaces():
+            ssid = os.popen('networksetup -getairportnetwork ' + interface).read()[:-1]
+            if '** Error: Error obtaining wireless information' not in ssid:
+                ssid = ssid[23:]
+                net_interface_type = interface
+                break
+
     print("Connected to wifi network: " + ssid)
+    addrs = netifaces.ifaddresses(net_interface_type)
     ipv4_addr = addrs[netifaces.AF_INET][0]['addr']
     print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
 
@@ -136,6 +145,12 @@ if __name__ == "__main__":
 
     if args.ip not in ipv4_addr:
         print ("please change the computer's IPv4 address to match")
+        print(">>> use the following command")
+        if "windows" in OS:
+            print("use command :")
+            print("(run as administrator)")
+        else:
+            print ("sudo ifconfig %s %s netmask 255.255.255.0" % (interface, riot_ip))
         exit()
     try:
         thread.start_new_thread(riot_listener, (args.id, args.ip, args.port))
