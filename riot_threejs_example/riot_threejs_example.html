@@ -169,7 +169,6 @@ Adapted for BITalino R-IoT with riot-serverbit -->
         var currentModel = null;
 
         var imu_data = {}
-        var straighteded_quat = new THREE.Quaternion(0, 0, 0, 0)
 
         // Start with main controls hidden until connected.
         $('#controls').hide();
@@ -256,7 +255,6 @@ Adapted for BITalino R-IoT with riot-serverbit -->
           // This will reset the 3D model so that it faces directly forward based
           // on the current BNO sensor orientation.
           var currentQuat = new THREE.Quaternion(imuData.Q1, imuData.Q2, imuData.Q3, imuData.Q4);
-          straighteded_quat = currentQuat
           offset.quaternion.copy(currentQuat.conjugate());
         });
 

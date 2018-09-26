@@ -1,0 +1,6 @@
+
+# Custom
+dist/
+python_win64
+*.vbs
+*.iss
