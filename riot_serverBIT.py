@@ -25,7 +25,9 @@ riot_ssid = 'riot'
 
 class Utils:
     OS = None
-    riot_data = ""
+    riot_data = [""] # 1 json string for each device
+    device_ids = [0]
+    num_devices = len(device_ids)
 
 ut = Utils()
 
@@ -62,11 +64,22 @@ def tostring(data):
 
     return str(data)
 
-def print_riot_data(unused_addr, id, *values):
-  print("OSC Message %s from device %s" % (unused_addr, id[0]))
-  print(values)
+def new_device(n):
+    print ("new device connected!")
+    ut.device_ids.append(n)
+    ut.riot_data.append("") #assign empty string to each device
 
-def assign_riot_data(unused_addr, id, *values):
+def print_riot_data(unused_addr, *values):
+    d_id = (int(unused_addr[1]))
+    if d_id not in ut.device_ids: 
+        new_device(d_id)
+    print("OSC Message %s from device %s" % (unused_addr, unused_addr[:2]))
+    print(values)
+
+def assign_riot_data(unused_addr, *values):
+    d_id = (int(unused_addr[1]))
+    if d_id not in ut.device_ids: new_device(d_id)
+        
     channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
     labels = ["ACC_X", "ACC_Y", "ACC_Z", "GYRO_X", "GYRO_Y", "GYRO_Z", "MAG_X", "MAG_Y", "MAG_Z",
         "TEMP", "IO", "A1", "A2", "C", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD"]
@@ -78,21 +91,23 @@ def assign_riot_data(unused_addr, id, *values):
             res += '"' + labels[i] + '":' + str(values[i]) + ','
         res = res[:-1] + "}"
         #if len(cl) > 0: cl[-1].write_message(res)
-        ut.riot_data = res
+        ut.riot_data[d_id] = res
     except:
         traceback.print_exc()
         os._exit(0)
 
-def riot_listener(id, ip, port):
-    dev_id = id
-    recv_addr = str("/%i/raw"%dev_id)
-    #print(recv_addr)
-    riot_dispatcher = dispatcher.Dispatcher()
-    # riot_dispatcher.map(recv_addr, print)
-    riot_dispatcher.map(recv_addr, assign_riot_data, dev_id)
+def riot_listener(ip, port):  
+#    for d_id in ut.device_ids:
+#        recv_addr = str("/%i/raw"%d_id)
+#        riot_dispatcher = dispatcher.Dispatcher()
+#        riot_dispatcher.map(recv_addr, assign_riot_data)
 
+    riot_dispatcher = dispatcher.Dispatcher()
+    riot_dispatcher.map("/*/raw", assign_riot_data)
+    
     server = osc_server.ThreadingOSCUDPServer(
       (ip, port), riot_dispatcher)
+    print ('{:^24s}'.format("====================="))
     print("Serving on {}".format(server.server_address))
     server.serve_forever()
 
@@ -137,10 +152,11 @@ def reset():
     os.execl(sys.executable, os.path.abspath(_file_), *sys.argv)
 
 async def webApp(ws, path):
-    print('LISTENING')
-    # print (ut.riot_data)
-    while True:
-        await ws.send(ut.riot_data)
+    device_id = ws.port - 9001
+#    print('LISTENING')
+    print ("streaming data from device %i to port %i" % (device_id, ws.port))
+    while ut.riot_data[device_id] != "":
+        await ws.send(ut.riot_data[device_id])
         await asyncio.sleep(0.1)
 
 if __name__ == "__main__":
@@ -159,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument("--websocket_ip",
       default='127.0.0.1', help="destination ip for websocket handler")
     parser.add_argument("--websocket_port",
-      type=int, default=9001, help="destination port for websocket handler")
+      type=int, default=9001, help="destination port for websocket handler is the port + device ID")
     args = parser.parse_args()
 
     net_interface_type, ssid = detect_net_config(args.net, OS)
@@ -206,11 +222,17 @@ if __name__ == "__main__":
     print ("Starting riot_serverBIT...")
     time.sleep(2)
     try:
-        thread.start_new_thread(riot_listener, (args.id, args.ip, args.port))
-        start_server = websockets.serve(webApp, args.websocket_ip, args.websocket_port)
-        asyncio.get_event_loop().run_until_complete(start_server)
+        thread.start_new_thread(riot_listener, (args.ip, args.port)) # one thread to listen to all devices on the same ip & port
+        time.sleep(5)
+        print ("found %i device(s)" % len(ut.device_ids))
+#        print (ut.riot_data)
+        for device_id in ut.device_ids:
+            start_server = websockets.serve(webApp, args.websocket_ip, args.websocket_port + device_id)
+            asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
         # ioloop.IOLoop.instance().start()
+    except Exception as e:
+        print (e)
     finally:
         print ()
         sys.exit(1)
