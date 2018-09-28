@@ -25,9 +25,10 @@ riot_ssid = 'riot'
 
 class Utils:
     OS = None
-    riot_data = [""] # 1 json string for each device
+    device_data = [""] # 1 json string for each device
     device_ids = [0]
     num_devices = len(device_ids)
+    osc_server_started = False
 
 ut = Utils()
 
@@ -67,7 +68,7 @@ def tostring(data):
 def new_device(n):
     print ("new device connected!")
     ut.device_ids.append(n)
-    ut.riot_data.append("") #assign empty string to each device
+    ut.device_data.append("") #assign empty string to each device
 
 def print_riot_data(unused_addr, *values):
     d_id = (int(unused_addr[1]))
@@ -91,7 +92,27 @@ def assign_riot_data(unused_addr, *values):
             res += '"' + labels[i] + '":' + str(values[i]) + ','
         res = res[:-1] + "}"
         #if len(cl) > 0: cl[-1].write_message(res)
-        ut.riot_data[d_id] = res
+        ut.device_data[d_id] = res
+    except:
+        traceback.print_exc()
+        os._exit(0)
+        
+def assign_bitalino_data(unused_addr, *values):
+    d_id = (int(unused_addr[1]))
+    if d_id not in ut.device_ids: new_device(d_id)
+        
+    channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+    labels = ["ACC_X", "ACC_Y", "ACC_Z", "GYRO_X", "GYRO_Y", "GYRO_Z", "MAG_X", "MAG_Y", "MAG_Z",
+        "TEMP", "IO", "A1", "A2", "C", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD"]
+    ch_mask = numpy.array(channels) - 1
+    try:
+        cols = numpy.arange(len(ch_mask))
+        res = "{"
+        for i in cols:
+            res += '"' + labels[i] + '":' + str(values[i]) + ','
+        res = res[:-1] + "}"
+        #if len(cl) > 0: cl[-1].write_message(res)
+        ut.device_data[d_id] = res
     except:
         traceback.print_exc()
         os._exit(0)
@@ -104,11 +125,12 @@ def riot_listener(ip, port):
 
     riot_dispatcher = dispatcher.Dispatcher()
     riot_dispatcher.map("/*/raw", assign_riot_data)
+    riot_dispatcher.map("/*/bitalino", assign_bitalino_data)
     
     server = osc_server.ThreadingOSCUDPServer(
       (ip, port), riot_dispatcher)
-    print ('{:^24s}'.format("====================="))
     print("Serving on {}".format(server.server_address))
+    ut.osc_server_started = True
     server.serve_forever()
 
 def detect_net_config(net, OS):
@@ -147,6 +169,21 @@ def detect_wireless_interface(OS, interface_list):
 
     return det_interface, det_ssid    
 
+def update_progress(count, total, status=''):
+    bar_len = 20
+    filled_len = int(round(bar_len * count / float(total)))
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+    # As suggested by Rom Ruben (see: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console/27871113#comment50529068_27871113)
+    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
+    sys.stdout.flush()
+def timer(t, rate = 0.25, text=''):
+    tt=round((t+rate)/rate)
+    for i in range(tt):
+        update_progress(i, round(t/rate), text)
+        time.sleep(rate)
+    print("\n")
+
 def reset():
     time.sleep(0.5)
     os.execl(sys.executable, os.path.abspath(_file_), *sys.argv)
@@ -155,8 +192,8 @@ async def webApp(ws, path):
     device_id = ws.port - 9001
 #    print('LISTENING')
     print ("streaming data from device %i to port %i" % (device_id, ws.port))
-    while ut.riot_data[device_id] != "":
-        await ws.send(ut.riot_data[device_id])
+    while ut.device_data[device_id] != "":
+        await ws.send(ut.device_data[device_id])
         await asyncio.sleep(0.1)
 
 if __name__ == "__main__":
@@ -172,10 +209,12 @@ if __name__ == "__main__":
       default=riot_ssid, help="name of the wifi network which R-IoT device is streaming data to")
     parser.add_argument("--net",
       default=None, help="name of the wireless interface which the computer is using")
-    parser.add_argument("--websocket_ip",
+    parser.add_argument("--websockets_ip",
       default='127.0.0.1', help="destination ip for websocket handler")
-    parser.add_argument("--websocket_port",
+    parser.add_argument("--websockets_port",
       type=int, default=9001, help="destination port for websocket handler is the port + device ID")
+    parser.add_argument("--find_new",
+      type=int, default=0, help="find new devices in network")
     args = parser.parse_args()
 
     net_interface_type, ssid = detect_net_config(args.net, OS)
@@ -208,7 +247,7 @@ if __name__ == "__main__":
             print(cmd)
             print("(run as administrator)")
             subprocess.Popen(cmd)
-            time.sleep(3)
+            timer(3)
             ipv4_addr = os.popen('netsh interface ipv4 show config %s | findstr /r "^....IP Address"' % net_interface_type).read()[:-1].split()[-1]
             if args.ip != ipv4_addr:
                 input("command must be ran as administrator, you can also set the ipv4 address manually (see R-IoT guide)  \
@@ -220,14 +259,15 @@ if __name__ == "__main__":
             raise Exception()
     #        exit()
     print ("Starting riot_serverBIT...")
-    time.sleep(2)
+    timer(2)
     try:
         thread.start_new_thread(riot_listener, (args.ip, args.port)) # one thread to listen to all devices on the same ip & port
-        time.sleep(5)
-        print ("found %i device(s)" % len(ut.device_ids))
-#        print (ut.riot_data)
+        while not ut.osc_server_started : time.sleep(0.1)
+        if args.find_new == 1: timer(5, text="searching for devices on this network")
+        if ut.device_data[0] != "" or len(ut.device_ids) > 0: 
+            print ("found %i device(s)" % len(ut.device_ids))
         for device_id in ut.device_ids:
-            start_server = websockets.serve(webApp, args.websocket_ip, args.websocket_port + device_id)
+            start_server = websockets.serve(webApp, args.websockets_ip, args.websockets_port + device_id)
             asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
         # ioloop.IOLoop.instance().start()
