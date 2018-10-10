@@ -72,7 +72,7 @@ def new_device(n):
 
 def print_riot_data(unused_addr, *values):
     d_id = (int(unused_addr[1]))
-    if d_id not in ut.device_ids: 
+    if d_id not in ut.device_ids:
         new_device(d_id)
     print("OSC Message %s from device %s" % (unused_addr, unused_addr[:2]))
     print(values)
@@ -80,27 +80,7 @@ def print_riot_data(unused_addr, *values):
 def assign_riot_data(unused_addr, *values):
     d_id = (int(unused_addr[1]))
     if d_id not in ut.device_ids: new_device(d_id)
-        
-    channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
-    labels = ["ACC_X", "ACC_Y", "ACC_Z", "GYRO_X", "GYRO_Y", "GYRO_Z", "MAG_X", "MAG_Y", "MAG_Z",
-        "TEMP", "IO", "A1", "A2", "C", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD"]
-    ch_mask = numpy.array(channels) - 1
-    try:
-        cols = numpy.arange(len(ch_mask))
-        res = "{"
-        for i in cols:
-            res += '"' + labels[i] + '":' + str(values[i]) + ','
-        res = res[:-1] + "}"
-        #if len(cl) > 0: cl[-1].write_message(res)
-        ut.device_data[d_id] = res
-    except:
-        traceback.print_exc()
-        os._exit(0)
-        
-def assign_bitalino_data(unused_addr, *values):
-    d_id = (int(unused_addr[1]))
-    if d_id not in ut.device_ids: new_device(d_id)
-        
+
     channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
     labels = ["ACC_X", "ACC_Y", "ACC_Z", "GYRO_X", "GYRO_Y", "GYRO_Z", "MAG_X", "MAG_Y", "MAG_Z",
         "TEMP", "IO", "A1", "A2", "C", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD"]
@@ -117,7 +97,27 @@ def assign_bitalino_data(unused_addr, *values):
         traceback.print_exc()
         os._exit(0)
 
-def riot_listener(ip, port):  
+def assign_bitalino_data(unused_addr, *values):
+    d_id = (int(unused_addr[1]))
+    if d_id not in ut.device_ids: new_device(d_id)
+
+    channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+    labels = ["ACC_X", "ACC_Y", "ACC_Z", "GYRO_X", "GYRO_Y", "GYRO_Z", "MAG_X", "MAG_Y", "MAG_Z",
+        "TEMP", "IO1", "IO2", "A1", "A2", "Q1", "Q2", "Q3", "Q4", "PITCH", "YAW", "ROLL", "HEAD"]
+    ch_mask = numpy.array(channels) - 1
+    try:
+        cols = numpy.arange(len(ch_mask))
+        res = "{"
+        for i in cols:
+            res += '"' + labels[i] + '":' + str(values[i]) + ','
+        res = res[:-1] + "}"
+        #if len(cl) > 0: cl[-1].write_message(res)
+        ut.device_data[d_id] = res
+    except:
+        traceback.print_exc()
+        os._exit(0)
+
+def riot_listener(ip, port):
 #    for d_id in ut.device_ids:
 #        recv_addr = str("/%i/raw"%d_id)
 #        riot_dispatcher = dispatcher.Dispatcher()
@@ -125,8 +125,8 @@ def riot_listener(ip, port):
 
     riot_dispatcher = dispatcher.Dispatcher()
     riot_dispatcher.map("/*/raw", assign_riot_data)
-    riot_dispatcher.map("/*/bitalino", assign_bitalino_data)
-    
+    # riot_dispatcher.map("/*/bitalino", assign_bitalino_data)
+
     server = osc_server.ThreadingOSCUDPServer(
       (ip, port), riot_dispatcher)
     print("Serving on {}".format(server.server_address))
@@ -167,7 +167,7 @@ def detect_wireless_interface(OS, interface_list):
                 det_interface = interface
                 break
 
-    return det_interface, det_ssid    
+    return det_interface, det_ssid
 
 def update_progress(count, total, status=''):
     bar_len = 20
@@ -191,6 +191,7 @@ def reset():
 async def webApp(ws, path):
     device_id = ws.port - 9001
 #    print('LISTENING')
+    print (ut.device_data[device_id])
     print ("streaming data from device %i to port %i" % (device_id, ws.port))
     while ut.device_data[device_id] != "":
         await ws.send(ut.device_data[device_id])
@@ -221,8 +222,8 @@ if __name__ == "__main__":
     print("Connected to wifi network: " + ssid)
 
     if riot_ip not in args.ip:
-        print ("IP address changed from R-IoT default (%s)" % riot_ip)    
-        
+        print ("IP address changed from R-IoT default (%s)" % riot_ip)
+
     if "Windows" in OS:
             ipv4_addr = os.popen('netsh interface ipv4 show config %s | findstr /r "^....IP Address"' % net_interface_type).read()[:-1].split()[-1]
             print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
@@ -230,14 +231,14 @@ if __name__ == "__main__":
         addrs = netifaces.ifaddresses(net_interface_type)
         ipv4_addr = addrs[netifaces.AF_INET][0]['addr']
         print("Network interface %s address: %s" % (net_interface_type, ipv4_addr))
-    
+
     while ssid not in args.ssid:
         print ('{:^24s}'.format("====================="))
         print ("currently connected to '%s', please connect to the same network as the R-IoT (%s)" % (ssid, args.ssid))
 #        print ("(target ssid can be changed with --ssid 'name_of_network')")
         input("please re-open R-IoT_ServerBIT or press ENTER to retry")
         net_interface_type, ssid = detect_net_config(args.net, OS)
-    
+
     if args.ip not in ipv4_addr:
         print ("The computer's IPv4 address must be changed to match")
 #        print(">>> use the following command")
@@ -259,12 +260,12 @@ if __name__ == "__main__":
             raise Exception()
     #        exit()
     print ("Starting riot_serverBIT...")
-    timer(2)
+    # timer(2)
     try:
         thread.start_new_thread(riot_listener, (args.ip, args.port)) # one thread to listen to all devices on the same ip & port
         while not ut.osc_server_started : time.sleep(0.1)
         if args.find_new == 1: timer(5, text="searching for devices on this network")
-        if ut.device_data[0] != "" or len(ut.device_ids) > 0: 
+        if ut.device_data[0] != "" or len(ut.device_ids) > 0:
             print ("found %i device(s)" % len(ut.device_ids))
         for device_id in ut.device_ids:
             start_server = websockets.serve(webApp, args.websockets_ip, args.websockets_port + device_id)
