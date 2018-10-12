@@ -133,20 +133,19 @@ def riot_listener(ip, port):
     ut.osc_server_started = True
     server.serve_forever()
 
-def detect_net_config(net, OS):
-    if args.net is not None:
-        net_interface_type, ssid = detect_wireless_interface(OS, [args.net])
-    else:
+def detect_net_config(net_interface_type, OS):
+    if net_interface_type is not None:
+        net_interface_type, ssid = detect_wireless_interface(OS, [net_interface_type])
+    while net_interface_type is None:
         try:
             print ("detecting wireless interface... (this can be set manually with --net)")
             net_interface_type, ssid = detect_wireless_interface(OS, netifaces.interfaces())
         except:
-            print ("could not retrieve ssid from %s" % args.net)
+            print ("could not retrieve ssid from %s" % net_interface_type)
             print ("see available interfaces with: \n \
                 ifconfig -a (UNIX) \n ipconfig |findstr 'adapter' (WINDOWS)")
             print ('{:^24s}'.format("====================="))
-            input ("please connect to a Wi-Fi network and re-open R-IoT_serverBIT")
-            sys.exit(1)
+            input ("please connect to a Wi-Fi network and press ENTER to continue")
     return net_interface_type, ssid
 
 def detect_wireless_interface(OS, interface_list):
@@ -187,6 +186,9 @@ def timer(t, rate = 0.25, text=''):
 def reset():
     time.sleep(0.5)
     os.execl(sys.executable, os.path.abspath(_file_), *sys.argv)
+    
+def countDevices():
+    timer(5, text="searching for devices on this network")
 
 async def webApp(ws, path):
     device_id = ws.port - 9001
@@ -196,8 +198,9 @@ async def webApp(ws, path):
     while ut.device_data[device_id] != "":
         await ws.send(ut.device_data[device_id])
         await asyncio.sleep(0.1)
-
+        
 if __name__ == "__main__":
+    # -1- parse arguemnts
     OS = platform.system()
     parser = argparse.ArgumentParser()
     parser.add_argument("--id",
@@ -208,17 +211,18 @@ if __name__ == "__main__":
       type=int, default=8888, help="The port to listen on")
     parser.add_argument("--ssid",
       default=riot_ssid, help="name of the wifi network which R-IoT device is streaming data to")
-    parser.add_argument("--net",
+    parser.add_argument("--net_interface",
       default=None, help="name of the wireless interface which the computer is using")
     parser.add_argument("--websockets_ip",
       default='127.0.0.1', help="destination ip for websocket handler")
     parser.add_argument("--websockets_port",
       type=int, default=9001, help="destination port for websocket handler is the port + device ID")
     parser.add_argument("--find_new",
-      type=int, default=0, help="find new devices in network")
+      type=int, default=1, help="find new devices in network")
     args = parser.parse_args()
-
-    net_interface_type, ssid = detect_net_config(args.net, OS)
+    
+    # -2- network config
+    net_interface_type, ssid = detect_net_config(args.net_interface, OS)
     print("Connected to wifi network: " + ssid)
 
     if riot_ip not in args.ip:
@@ -244,29 +248,36 @@ if __name__ == "__main__":
 #        print(">>> use the following command")
         if "Windows" in OS:
             cmd = "netsh interface ip set address %s static %s 255.255.255.0 192.168.1.1" % (net_interface_type, args.ip)
+#            print(cmd)
+#            print("(run as administrator)")
             input("press ENTER to auto re-configure network settings and continue. You may need to re-open R-IoT serverBIT")
-            print(cmd)
-            print("(run as administrator)")
-            subprocess.Popen(cmd)
-            timer(3)
-            ipv4_addr = os.popen('netsh interface ipv4 show config %s | findstr /r "^....IP Address"' % net_interface_type).read()[:-1].split()[-1]
-            if args.ip != ipv4_addr:
-                input("command must be ran as administrator, you can also set the ipv4 address manually (see R-IoT guide)  \
+#            subprocess.Popen(cmd)
+            try:
+                proc = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                timer(3)
+                # do something with output
+            except subprocess.CalledProcessError:
+                input ("There was an error, please run as administrator. You can also change the ipv4 address manually (see R-IoT guide)  \
                 \nclose window and try again")
                 sys.exit(1)
         else:
-            print(">>> use the following command")
-            print ("sudo ifconfig %s %s netmask 255.255.255.0" % (net_interface_type, riot_ip) )
+            cmd = "sudo ifconfig %s %s netmask 255.255.255.0" % (net_interface_type, riot_ip)
+            print(">>> paste the following command")
+            print ( cmd )
             raise Exception()
     #        exit()
     print ("Starting riot_serverBIT...")
-    # timer(2)
+    timer(2)
+    
+    # -3- stream device data to network
     try:
         thread.start_new_thread(riot_listener, (args.ip, args.port)) # one thread to listen to all devices on the same ip & port
         while not ut.osc_server_started : time.sleep(0.1)
         if args.find_new == 1: timer(5, text="searching for devices on this network")
-        if ut.device_data[0] != "" or len(ut.device_ids) > 0:
-            print ("found %i device(s)" % len(ut.device_ids))
+        while ut.device_data[0] == "" or len(ut.device_ids) == 0:
+            print ("no devices found")
+            timer(5, text="searching for devices on this network")
+        print ("found %i device(s)" % len(ut.device_ids))
         for device_id in ut.device_ids:
             start_server = websockets.serve(webApp, args.websockets_ip, args.websockets_port + device_id)
             asyncio.get_event_loop().run_until_complete(start_server)
