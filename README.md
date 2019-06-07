@@ -42,7 +42,7 @@ or edit [start_win64.bat](start_win64.bat)
 
 2. Connct to Wi-Fi network
 
-![Screenshot__6_](/uploads/54ee41c423e08e42fa197e6f74df426b/Screenshot__6_.png)
+![Screenshot__6_](https://gitlab.com/weselle/riot-serverbit/uploads/54ee41c423e08e42fa197e6f74df426b/Screenshot__6_.png)
 
 3. Run riot_serverBIT.py
 
@@ -51,11 +51,11 @@ python3 riot_serverBIT.py
 ```
 4. Accept auto configuration or run the given command. Re-launch riot_serverBIT if needed
 
-![C__WINDOWS_System32_cmd.exe_9_26_2018_3_04_40_PM](/uploads/909f6b52e6407506ac218a1929e59f1d/C__WINDOWS_System32_cmd.exe_9_26_2018_3_04_40_PM.png)
+![C__WINDOWS_System32_cmd.exe_9_26_2018_3_04_40_PM](https://gitlab.com/weselle/riot-serverbit/uploads/909f6b52e6407506ac218a1929e59f1d/C__WINDOWS_System32_cmd.exe_9_26_2018_3_04_40_PM.png)
 
 5. Server is now running, open [/riot_threejs_example/riot_threejs_example.html](/riot_threejs_example/riot_threejs_example.html) (if already open, refresh page)
  
-![ezgif-3-8d48ccf9a2](/uploads/95340dac2a712c2efe8adb890e131560/ezgif-3-8d48ccf9a2.gif)
+![ezgif-3-8d48ccf9a2](https://gitlab.com/weselle/riot-serverbit/uploads/95340dac2a712c2efe8adb890e131560/ezgif-3-8d48ccf9a2.gif)
 
 ### Windows Commands
 Manually set IPv4 address, netmask and gateway:
