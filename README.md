@@ -21,7 +21,7 @@ This program assumes the default configuration of the device. If these settings 
 ##### Configuration page
 To change the default configuration, see **R-IoT configuration & setup -> Changing the default configuration** in the [user guide](http://www.bitalino.com/docs/R-IoT_User_Guide.pdf)
 
-![riot_ServerBIT_config1](/uploads/1eb0f685cdf526b8304ba4eeaa6b296f/riot_ServerBIT_config1.png)
+![riot_ServerBIT_config1](https://gitlab.com/weselle/riot-serverbit/uploads/1eb0f685cdf526b8304ba4eeaa6b296f/riot_ServerBIT_config1.png)
 
 Run script with arguments
 
@@ -38,7 +38,7 @@ or edit [start_win64.bat](start_win64.bat)
 ### Getting started (threejs example)
 1. With router switched on, Turn on the R-IoT device
 
-![ezgif-3-83cdbcc833](/uploads/86701a1974414c543b67701f6176ab8d/ezgif-3-83cdbcc833.gif)
+![ezgif-3-83cdbcc833](https://gitlab.com/weselle/riot-serverbit/uploads/86701a1974414c543b67701f6176ab8d/ezgif-3-83cdbcc833.gif)
 
 2. Connct to Wi-Fi network
 
