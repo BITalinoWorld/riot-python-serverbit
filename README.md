@@ -70,3 +70,9 @@ To get back online, reset dhcp (run as admin):
 ```
 netsh interface ip set address Wi-Fi dhcp
 ```
+
+### No router? Setting up a direct Wi-Fi connection using Access Point mode
+
+By enabling Access Point mode, you'll be able to connect to the R-IoT's wireless network directly. From here, the sensor data will stream to an OSC server on your device. You can initiate this connection using ServerBIT.
+
+For more information, please have a look at this tutorial: [https://serverbit.gitbook.io/docs/r-iot/no-router-setting-up-a-direct-wi-fi-connection-using-access-point-mode](https://serverbit.gitbook.io/docs/r-iot/no-router-setting-up-a-direct-wi-fi-connection-using-access-point-mode)
