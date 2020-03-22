@@ -19,7 +19,7 @@ additional arguments can be viewed using the -h flag
 This program assumes the default configuration of the device. If these settings are changed, it's required to parse the new settings to the script
 
 ##### Configuration page
-To change the default configuration, see **R-IoT configuration & setup -> Changing the default configuration** in the [user guide](http://www.bitalino.com/docs/R-IoT_User_Guide.pdf)
+To change the default configuration, see **R-IoT configuration & setup -> Changing the default configuration** in the [user guide](https://bitalino.com/docs/MANUAL_RIOT_V1.2.pdf)
 
 ![riot_ServerBIT_config1](https://gitlab.com/weselle/riot-serverbit/uploads/1eb0f685cdf526b8304ba4eeaa6b296f/riot_ServerBIT_config1.png)
 
