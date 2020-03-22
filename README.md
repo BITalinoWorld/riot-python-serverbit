@@ -2,7 +2,7 @@
 This can be used to forward the R-IoT's OSC messages to WebSockets. We've also provided some handy tools for setting up your computer's network to work with the device.
 
 For more information for getting started with the R-IoT, please see the guide:
-[R-IoT_User_Guide.pdf](http://www.bitalino.com/docs/R-IoT_User_Guide.pdf)
+[R-IoT_User_Guide.pdf](https://bitalino.com/docs/MANUAL_RIOT_V1.2.pdf)
 
 ### Optional arguments
 
